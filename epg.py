@@ -364,12 +364,21 @@ def fetch_epg(
     cache_dir: Path,
     timeout: int = 120,
     source_id: str = "",
+    user_agent: str | None = None,
 ) -> int:
     """Fetch and parse XMLTV EPG data directly into sqlite.
 
-    Returns number of programs inserted.
+    Args:
+        epg_url: URL of the XMLTV EPG feed
+        cache_dir: Directory for debug files if parsing fails
+        timeout: Request timeout in seconds
+        source_id: Source identifier for multi-source support
+        user_agent: User-Agent header to send. If None, uses default.
+
+    Returns:
+        Number of programs inserted.
     """
-    with safe_urlopen(epg_url, timeout=timeout) as resp:
+    with safe_urlopen(epg_url, timeout=timeout, user_agent=user_agent) as resp:
         content = resp.read()
         with contextlib.suppress(Exception):
             content = gzip.decompress(content)
