@@ -27,10 +27,22 @@ class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def safe_urlopen(url: str, timeout: int = 30) -> Any:
-    """Open URL with safe redirect handling."""
+_DEFAULT_USER_AGENT = "VLC/3.0.20 LibVLC/3.0.20"
+
+
+def safe_urlopen(url: str, timeout: int = 30, user_agent: str | None = None) -> Any:
+    """Open URL with safe redirect handling.
+
+    Args:
+        url: URL to open
+        timeout: Request timeout in seconds
+        user_agent: User-Agent header to send. If None, uses a default VLC User-Agent
+            to avoid being blocked by providers that reject Python's default.
+    """
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise urllib.error.URLError(f"Unsafe URL scheme: {parsed.scheme}")
+    ua = user_agent if user_agent else _DEFAULT_USER_AGENT
+    req = urllib.request.Request(url, headers={"User-Agent": ua})
     opener = urllib.request.build_opener(_SafeRedirectHandler())
-    return opener.open(url, timeout=timeout)
+    return opener.open(req, timeout=timeout)

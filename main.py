@@ -509,12 +509,13 @@ async def index(request: Request, _user: Annotated[dict, Depends(require_auth)])
 
 def _fetch_all_epg(epg_urls: list[tuple[str, int, str]]) -> int:
     """Fetch EPG from all URLs into sqlite (in parallel). Returns total program count."""
+    user_agent = ffmpeg_command.get_user_agent()
 
     def fetch_one(url_timeout_source: tuple[str, int, str]) -> tuple[str, int]:
         url, timeout, source_id = url_timeout_source
         try:
             log.info("Fetching EPG (timeout=%ds): %s", timeout, url[:80])
-            count = fetch_epg(url, CACHE_DIR, timeout=timeout, source_id=source_id)
+            count = fetch_epg(url, CACHE_DIR, timeout=timeout, source_id=source_id, user_agent=user_agent)
             log.info("EPG done: %d programs from %s", count, url[:50])
             return url, count
         except Exception as e:
