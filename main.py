@@ -1827,6 +1827,11 @@ async def transcode_start(
     source_id: str = "",
 ):
     """Start a transcode session, return session ID."""
+    if os.environ.get("VERCEL"):
+        raise HTTPException(
+            503,
+            "Transcoding is not available on this deployment (serverless). Use direct playback.",
+        )
     deinterlace_fb = deinterlace_fallback == "1"
     username = user.get("sub", "")
 

@@ -570,9 +570,9 @@
       }
       playWithUrl(data.playlist, onError, data.subtitles);
     } catch (e) {
-      console.error('[TC] Error:', e);
-      if (onError) onError();
-      else showError();
+      console.warn('[TC] Transcode failed, falling back to direct playback:', e.message || e);
+      error.classList.add('hidden');
+      playWithUrl(cfg.rawUrl, onError || (() => showError()));
     }
   }
 
