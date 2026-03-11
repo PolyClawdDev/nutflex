@@ -326,6 +326,64 @@ def prune_old_programs(before: datetime) -> int:
     return cursor.rowcount
 
 
+def _normalize_name_for_match(name: str) -> str:
+    """Normalize channel/stream name for fuzzy matching (lower, alphanumeric + spaces)."""
+    if not name:
+        return ""
+    s = name.lower().strip()
+    # Remove common suffixes so "France 4 HD" matches "France 4"
+    for suffix in (" hd", " fhd", " uhd", " hq", " sd", " 4k"):
+        if s.endswith(suffix):
+            s = s[: -len(suffix)].strip()
+    return "".join(c if c.isalnum() or c.isspace() else "" for c in s).strip()
+
+
+# Cache: (source_id, normalized_name) -> channel_id, so we don't query every row
+_name_lookup_cache: dict[tuple[str, str], str] = {}
+_name_lookup_cache_sources: set[str] = set()
+
+
+def find_channel_id_by_name(stream_name: str, source_id: str) -> str:
+    """When stream has no epg_channel_id, try to match by name to an EPG channel. Returns channel_id or \"\"."""
+    if not stream_name or not source_id:
+        return ""
+    key_norm = _normalize_name_for_match(stream_name)
+    if not key_norm:
+        return ""
+    cache_key = (source_id, key_norm)
+    if cache_key in _name_lookup_cache:
+        return _name_lookup_cache[cache_key]
+    # Populate cache for this source if not yet done
+    global _name_lookup_cache_sources
+    if source_id not in _name_lookup_cache_sources:
+        _name_lookup_cache_sources.add(source_id)
+        conn = _get_conn()
+        rows = conn.execute(
+            "SELECT id, name FROM channels WHERE source_id = ?", (source_id,)
+        ).fetchall()
+        for row in rows:
+            n = _normalize_name_for_match(row["name"] if row["name"] else "")
+            if n and (source_id, n) not in _name_lookup_cache:
+                _name_lookup_cache[(source_id, n)] = row["id"]
+            # Also key without leading "XX " (country prefix) so "France 4" matches "fr france 4"
+            parts = n.split(None, 1)
+            if len(parts) == 2 and len(parts[0]) <= 3:
+                short = parts[1]
+                if short and (source_id, short) not in _name_lookup_cache:
+                    _name_lookup_cache[(source_id, short)] = row["id"]
+        for row in rows:
+            n = _normalize_name_for_match(row["id"] if row["id"] else "")
+            if n and (source_id, n) not in _name_lookup_cache:
+                _name_lookup_cache[(source_id, n)] = row["id"]
+    result = _name_lookup_cache.get(cache_key, "")
+    if not result and " " in key_norm:
+        # Try without leading token (e.g. "fr france 4" -> "france 4")
+        parts = key_norm.split(None, 1)
+        if len(parts) == 2 and len(parts[0]) <= 3:
+            result = _name_lookup_cache.get((source_id, parts[1]), "")
+    return result
+
+
 # =============================================================================
 # XMLTV Parsing
 # =============================================================================

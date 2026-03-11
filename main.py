@@ -844,8 +844,13 @@ def _build_guide_rows(
     if not slice_streams:
         return []
 
-    # Collect EPG IDs for batch query
-    epg_ids = [s.get("epg_channel_id") or "" for s in slice_streams]
+    # Collect EPG IDs for batch query (use name fallback when provider omits epg_channel_id)
+    epg_ids = []
+    for s in slice_streams:
+        eid = (s.get("epg_channel_id") or "").strip()
+        if not eid:
+            eid = epg.find_channel_id_by_name(s.get("name", ""), s.get("source_id", ""))
+        epg_ids.append(eid)
     epg_ids_set = [e for e in epg_ids if e]
 
     # Batch fetch icons and programs
@@ -1407,8 +1412,10 @@ def _get_live_player_info(stream_id: str) -> PlayerInfo:
         if source:
             info.deinterlace_fallback = source.get("deinterlace_fallback", True)
 
-    # Look up current program from EPG
-    epg_id = stream.get("epg_channel_id") or ""
+    # Look up current program from EPG (use name fallback when provider omits epg_channel_id)
+    epg_id = (stream.get("epg_channel_id") or "").strip() or epg.find_channel_id_by_name(
+        stream.get("name", ""), stream.get("source_id", "")
+    )
     if epg_id:
         now = datetime.now(UTC)
         programs = epg.get_programs_in_range(epg_id, now, now + timedelta(minutes=1))
