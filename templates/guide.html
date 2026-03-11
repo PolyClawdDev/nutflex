@@ -100,6 +100,7 @@
       </script>
       <span class="text-xs text-gray-500">({{ total_count | default(channel_count) }} ch)</span>
       <a href="/settings#filters" class="text-xs text-gray-500 hover:text-blue-400">[edit]</a>
+      <a href="/search?live=true" class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 focusable" tabindex="0">Search</a>
       {% endif %}
     </div>
     <div class="flex gap-1">
@@ -182,6 +183,7 @@
       }
       </script>
       {% endif %}
+      <a href="/search?live=true" class="px-1 py-0.5 text-[10px] bg-gray-700 rounded focusable" tabindex="0">Search</a>
     </div>
     <div class="flex gap-1">
       <a href="/guide?offset={{ offset - 2 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"

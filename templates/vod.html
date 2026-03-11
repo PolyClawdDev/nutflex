@@ -49,6 +49,9 @@
         <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Rating</option>
         <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
       </select>
+      <a href="/search?vod=true" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 focusable" tabindex="0">
+        Search
+      </a>
     </div>
     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 sm:gap-3 pb-4">
       {% for movie in streams %}
