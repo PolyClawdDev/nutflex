@@ -71,15 +71,48 @@ def _verify_hashed_password(password: str, hashed: str) -> bool:
     return hmac.compare_digest(_hash_password(password, salt), hashed)
 
 
+def _get_vercel_admin_users() -> dict[str, dict[str, Any]]:
+    """On Vercel, seed admin user(s) from NETV_ADMIN env so every instance sees them.
+
+    Format: NETV_ADMIN=username:password or user1:pass1,user2:pass2
+    Uses deterministic salt so the same password hashes the same every time (for verification).
+    """
+    if not os.environ.get("VERCEL"):
+        return {}
+    raw = os.environ.get("NETV_ADMIN", "").strip()
+    if not raw:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    salt = hashlib.sha256(f"netv-vercel-admin-{_get_secret_key()}".encode()).hexdigest()[:32]
+    for part in raw.split(","):
+        part = part.strip()
+        if ":" not in part:
+            continue
+        user, passwd = part.split(":", 1)
+        user, passwd = user.strip(), passwd.strip()
+        if not user or not passwd:
+            continue
+        hashed = _hash_password(passwd, salt=salt)
+        out[user] = {"password": hashed, "admin": True}
+    return out
+
+
 def _get_users() -> dict[str, dict[str, Any]]:
     """Get users from settings. Returns empty dict if no users configured.
 
     User format: {username: {password: str, admin: bool}}
+    On Vercel, if no users in file, seed from NETV_ADMIN env so admin/settings persist.
     """
     settings_file = _get_settings_file()
     if settings_file.exists():
         settings = json.loads(settings_file.read_text())
-        return settings.get("users", {})
+        users = settings.get("users", {})
+        if users:
+            return users
+    if os.environ.get("VERCEL"):
+        vercel_users = _get_vercel_admin_users()
+        if vercel_users:
+            return vercel_users
     return {}
 
 

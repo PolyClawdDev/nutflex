@@ -313,13 +313,26 @@ There's also some useful applications in `tools/`:
 
 ### Deploying on Vercel
 
-The repo includes `vercel.json` and `requirements.txt` for serverless deployment. So that login state persists across serverless invocations (and you don’t get logged out on navigation), set a **fixed secret** in the Vercel project:
+The repo includes `vercel.json` and `requirements.txt` for serverless deployment.
 
-1. Vercel dashboard → your project → **Settings** → **Environment Variables**
-2. Add: **Name** `NETV_SECRET_KEY`, **Value** a long random string (e.g. run `openssl rand -hex 32` and paste the result)
-3. Redeploy so new invocations use the same secret
+**Required so Settings and login work like localhost:**
 
-Without this, each request may use a different in-memory secret and tokens will fail, so you’ll be redirected to login on every page.
+1. **Admin user (so you see Server Settings, Transcoding, Sources)**  
+   Set `NETV_ADMIN=username:password` (e.g. `NETV_ADMIN=admin:yourpassword`). That user is treated as admin on every serverless instance, so the full Settings page (Transcoding, Sources, etc.) is shown.
+
+2. **Default IPTV source (so Sources section is pre-filled)**  
+   Set:
+   - `NETV_DEFAULT_SOURCE_URL` – e.g. `https://s.rocketdns.info`
+   - `NETV_DEFAULT_SOURCE_USER` – your IPTV username
+   - `NETV_DEFAULT_SOURCE_PASS` – your IPTV password
+   - `NETV_DEFAULT_SOURCE_NAME` – optional, e.g. `My IPTV` (default)
+
+   Then every instance shows that source in Settings; you can edit/delete it like on localhost.
+
+3. **Login persistence (optional)**  
+   You can set `NETV_SECRET_KEY` to a long random string so JWT uses a fixed secret; if unset, a deterministic secret is used on Vercel so login still persists.
+
+Add these in Vercel → your project → **Settings** → **Environment Variables**, then redeploy.
 
 ## Troubleshooting
 

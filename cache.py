@@ -510,6 +510,28 @@ def load_server_settings() -> dict[str, Any]:
     data.setdefault("users", {})
     data.setdefault("user_agent_preset", "tivimate")
     data.setdefault("user_agent_custom", "")
+    # On Vercel, seed default source from env so Settings shows Sources/Transcoding on every instance
+    if os.environ.get("VERCEL") and not data.get("sources"):
+        url = os.environ.get("NETV_DEFAULT_SOURCE_URL", "").strip()
+        if url:
+            name = os.environ.get("NETV_DEFAULT_SOURCE_NAME", "My IPTV").strip() or "My IPTV"
+            data.setdefault("sources", [])
+            data["sources"].append(
+                {
+                    "id": "src_env_default",
+                    "name": name,
+                    "type": "xtream",
+                    "url": url.rstrip("/"),
+                    "username": os.environ.get("NETV_DEFAULT_SOURCE_USER", ""),
+                    "password": os.environ.get("NETV_DEFAULT_SOURCE_PASS", ""),
+                    "epg_timeout": 120,
+                    "epg_schedule": ["03:00", "15:00"],
+                    "epg_enabled": True,
+                    "epg_url": "",
+                    "deinterlace_fallback": True,
+                    "max_streams": 0,
+                }
+            )
     return data
 
 
