@@ -15,6 +15,7 @@ uv.lock
 # App data
 .cache/
 cache/
+.env
 
 # Certificates
 *.pem
