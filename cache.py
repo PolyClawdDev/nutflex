@@ -9,6 +9,7 @@ from typing import Any
 import hashlib
 import json
 import logging
+import os
 import pathlib
 import subprocess
 import threading
@@ -95,9 +96,12 @@ LIBVA_DRIVER = _detect_libva_driver()
 DRI_PATH = _detect_dri_path()
 
 APP_DIR = pathlib.Path(__file__).parent
-# Use old "cache" if it exists (backwards compat), otherwise ".cache"
-_OLD_CACHE = APP_DIR / "cache"
-CACHE_DIR = _OLD_CACHE if _OLD_CACHE.exists() else APP_DIR / ".cache"
+# On Vercel (read-only fs) use /tmp so app can start and handle setup/login
+if os.environ.get("VERCEL"):
+    CACHE_DIR = pathlib.Path("/tmp/netv")
+else:
+    _OLD_CACHE = APP_DIR / "cache"
+    CACHE_DIR = _OLD_CACHE if _OLD_CACHE.exists() else APP_DIR / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 SERVER_SETTINGS_FILE = CACHE_DIR / "server_settings.json"
 USERS_DIR = CACHE_DIR / "users"

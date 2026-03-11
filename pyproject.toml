@@ -45,6 +45,9 @@ ai_upscale = [
     "tensorrt>=10.0",
 ]
 
+[project.scripts]
+app = "main:app"
+
 [project.urls]
 Repository = "https://github.com/jvdillon/netv"
 
