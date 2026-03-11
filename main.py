@@ -656,13 +656,21 @@ async def guide_page(
                 {
                     "grid_data": [],
                     "selected_cats": [],
+                    "saved_filter": set(),
+                    "ordered_filter_cats": [],
                     "cats_param": cats,
+                    "effective_cats": "",
                     "time_markers": [],
+                    "time_markers_mobile": [],
                     "offset": offset,
                     "window_start": "",
-                    "loading_message": "Loading channel data...",
+                    "loading_message": "Loading channel data… This may take a few seconds on first visit.",
                     "channel_count": 0,
+                    "total_count": 0,
                     "loading": True,
+                    "epg_loading": False,
+                    "virtual_scroll": True,
+                    "content_access": _get_content_access(user.get("sub", "")),
                 },
             )
 
@@ -695,6 +703,10 @@ async def guide_page(
     # Use helper to get filtered/sorted streams
     streams, ordered_cats, selected_cats = _get_guide_streams(effective_cats, username)
     total_count = len(streams)
+    all_streams = get_cache().get("live_streams", [])
+    guide_empty_reason = (
+        "no_data" if total_count == 0 and not all_streams else "filtered" if total_count == 0 else None
+    )
 
     # Time window: 3 hours starting from offset
     now = datetime.now(UTC)
@@ -752,6 +764,7 @@ async def guide_page(
             "total_count": total_count,  # For virtual scrolling
             "virtual_scroll": virtual_scroll_enabled,
             "loading": False,
+            "guide_empty_reason": guide_empty_reason,
             "content_access": _get_content_access(username),
         },
     )
@@ -770,6 +783,13 @@ def _get_guide_streams(cats: str, username: str) -> tuple[list[dict], list[str],
     if cats:
         ordered_cats = [c.strip() for c in cats.split(",") if c.strip()]
     selected_cats = set(ordered_cats)
+
+    # Empty filter = allow all (show every channel by default, like "Allow All" in Settings)
+    if not selected_cats and all_streams:
+        for s in all_streams:
+            for c in s.get("category_ids") or []:
+                selected_cats.add(str(c))
+        ordered_cats = sorted(selected_cats)
 
     if not selected_cats:
         return [], ordered_cats, selected_cats
@@ -2142,9 +2162,10 @@ async def settings_page(request: Request, user: Annotated[dict, Depends(require_
             "vod_categories": vod_categories,
             "series_categories": series_categories,
             "source_names": source_names,
-            "selected_cats": user_settings.get("guide_filter", []),
-            "selected_vod_cats": user_settings.get("vod_filter", []),
-            "selected_series_cats": user_settings.get("series_filter", []),
+            # Default to "allow all" so UI shows everything in Available (matches guide/vod/series behaviour)
+            "selected_cats": user_settings.get("guide_filter") or [str(c["category_id"]) for c in live_categories],
+            "selected_vod_cats": user_settings.get("vod_filter") or [str(c["category_id"]) for c in vod_categories],
+            "selected_series_cats": user_settings.get("series_filter") or [str(c["category_id"]) for c in series_categories],
             "cc_lang": user_settings.get("cc_lang", ""),
             "cc_style": user_settings.get("cc_style", {}),
             "cast_host": user_settings.get("cast_host", ""),

@@ -195,7 +195,14 @@
     </div>
   </div>
 
-  {% if grid_data %}
+  {% if loading %}
+  <div class="flex-1 flex items-center justify-center bg-gray-800 rounded-lg">
+    <div class="text-center text-gray-400">
+      <p class="text-xl mb-2">{{ loading_message | default('Loading channel data…') }}</p>
+      <p class="text-sm">The page will refresh automatically.</p>
+    </div>
+  </div>
+  {% elif grid_data %}
   <!-- EPG Grid (scrollable) -->
   <div class="flex-1 overflow-y-auto overflow-x-hidden bg-gray-800 rounded-lg">
     <!-- Mobile Time Header -->
@@ -297,9 +304,15 @@
   </div>
   {% else %}
   <div class="flex-1 flex items-center justify-center bg-gray-800 rounded-lg">
-    <div class="text-center text-gray-400">
+    <div class="text-center text-gray-400 max-w-md px-4">
+      {% if guide_empty_reason is defined and guide_empty_reason == 'no_data' %}
+      <p class="text-2xl mb-4">No channel data yet</p>
+      <p class="mb-2">Channels are still loading or your source needs a refresh. Try <a href="/guide" class="text-blue-400 hover:underline">refreshing the page</a>, or go to <a href="/settings#filters" class="text-blue-400 hover:underline">Settings → Sources</a> and run <strong>Refresh</strong> for your IPTV source.</p>
+      <p class="text-sm mt-4"><a href="/guide" class="text-blue-400 hover:underline">Reload Live TV</a></p>
+      {% else %}
       <p class="text-2xl mb-4">No channels selected</p>
-      <p>Go to <a href="/settings#filters" class="text-blue-400 hover:underline">Settings</a> to configure Live TV category filter</p>
+      <p>Go to <a href="/settings#filters" class="text-blue-400 hover:underline">Settings</a> to configure Live TV category filter (allow categories you want to see).</p>
+      {% endif %}
     </div>
   </div>
   {% endif %}
