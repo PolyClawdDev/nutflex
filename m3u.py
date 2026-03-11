@@ -222,10 +222,11 @@ def load_all_live_data() -> tuple[list[dict], list[dict], list[tuple[str, int, s
                 try:
                     log.info("Refreshing live data in background")
                     new_cats, new_streams, new_epg_urls = _fetch_all_live_data()
-                    save_file_cache(
-                        "live_data",
-                        {"cats": new_cats, "streams": new_streams, "epg_urls": new_epg_urls},
-                    )
+                    if new_streams:
+                        save_file_cache(
+                            "live_data",
+                            {"cats": new_cats, "streams": new_streams, "epg_urls": new_epg_urls},
+                        )
                     with _cache_lock:
                         _cache.pop("live_categories", None)
                         _cache.pop("live_streams", None)
@@ -245,7 +246,9 @@ def load_all_live_data() -> tuple[list[dict], list[dict], list[tuple[str, int, s
             return data["cats"], data["streams"], parse_epg_urls(data.get("epg_urls", []))
         log.info("No live cache, fetching")
         cats, streams, epg_urls = _fetch_all_live_data()
-        save_file_cache("live_data", {"cats": cats, "streams": streams, "epg_urls": epg_urls})
+        # Don't persist empty cache so next load will refetch (e.g. sources added later)
+        if streams:
+            save_file_cache("live_data", {"cats": cats, "streams": streams, "epg_urls": epg_urls})
         return cats, streams, epg_urls
 
 

@@ -46,6 +46,12 @@ import urllib.parse
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+
+# 1x1 transparent GIF for failed logo fetches (avoids 502s from blocked/timeout external URLs)
+_EMPTY_LOGO_GIF = (
+    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00"
+    b",\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.responses import StreamingResponse
@@ -2363,7 +2369,8 @@ async def guide_refresh(_user: Annotated[dict, Depends(require_auth)]):
                 get_cache()["live_categories"] = cats
                 get_cache()["live_streams"] = streams
                 get_cache()["epg_urls"] = epg_urls
-            save_file_cache("live_data", {"cats": cats, "streams": streams, "epg_urls": epg_urls})
+            if streams:
+                save_file_cache("live_data", {"cats": cats, "streams": streams, "epg_urls": epg_urls})
             log.info("Live refresh: complete (%d categories, %d streams)", len(cats), len(streams))
         except Exception as e:
             log.error("Live refresh failed: %s", e)
@@ -2655,19 +2662,32 @@ async def get_logo(
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise HTTPException(400, "Invalid URL scheme")
-    # Fetch the logo (in thread to avoid blocking)
+    # Fetch the logo (in thread to avoid blocking). On failure return transparent pixel so guide still works.
     try:
-        data, content_type = await asyncio.to_thread(_fetch_logo, url)
+        data, content_type = await asyncio.to_thread(_fetch_logo, url, 5)
         path = save_logo(source, url, data, content_type)
         return FileResponse(path, headers={"Cache-Control": f"max-age={LOGO_BROWSER_TTL}"})
-    except ValueError as e:
-        raise HTTPException(400, str(e)) from None
-    except urllib.error.URLError as e:
+    except ValueError:
+        # Invalid URL or not an image
+        return Response(
+            content=_EMPTY_LOGO_GIF,
+            media_type="image/gif",
+            headers={"Cache-Control": f"max-age={LOGO_BROWSER_TTL}"},
+        )
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
         log.debug("Logo fetch failed for %s: %s", url, e)
-        raise HTTPException(502, "Failed to fetch logo") from None
+        return Response(
+            content=_EMPTY_LOGO_GIF,
+            media_type="image/gif",
+            headers={"Cache-Control": f"max-age={LOGO_BROWSER_TTL}"},
+        )
     except Exception as e:
         log.debug("Logo fetch error for %s: %s", url, e)
-        raise HTTPException(500, "Logo fetch error") from None
+        return Response(
+            content=_EMPTY_LOGO_GIF,
+            media_type="image/gif",
+            headers={"Cache-Control": f"max-age={LOGO_BROWSER_TTL}"},
+        )
 
 
 @app.post("/settings/transcode")
