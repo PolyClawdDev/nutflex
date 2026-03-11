@@ -334,6 +334,8 @@ The repo includes `vercel.json` and `requirements.txt` for serverless deployment
 
 Add these in Vercel → your project → **Settings** → **Environment Variables**, then redeploy.
 
+---
+
 ## Troubleshooting
 
 ### Debug Logging
