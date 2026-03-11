@@ -31,7 +31,15 @@ def _get_settings_file() -> pathlib.Path:
 
 
 def _get_secret_key() -> str:
-    """Get or generate secret key (persisted in settings)."""
+    """Get or generate secret key (persisted in settings).
+
+    On Vercel/serverless, /tmp is per-instance so the secret would change per
+    request and tokens would fail. Use NETV_SECRET_KEY env var so all instances
+    share the same secret and login persists (e.g. set in Vercel dashboard).
+    """
+    key = os.environ.get("NETV_SECRET_KEY")
+    if key:
+        return key
     settings_file = _get_settings_file()
     settings = {}
     if settings_file.exists():

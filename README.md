@@ -311,6 +311,16 @@ There's also some useful applications in `tools/`:
 - `alignm3u.py`: Useful for reworking your HDHomeRun m3u to align with guide.
 - `xtream2m3u.py`: Dump xtream to m3u, useful for making Emby work with IPTV.
 
+### Deploying on Vercel
+
+The repo includes `vercel.json` and `requirements.txt` for serverless deployment. So that login state persists across serverless invocations (and you don’t get logged out on navigation), set a **fixed secret** in the Vercel project:
+
+1. Vercel dashboard → your project → **Settings** → **Environment Variables**
+2. Add: **Name** `NETV_SECRET_KEY`, **Value** a long random string (e.g. run `openssl rand -hex 32` and paste the result)
+3. Redeploy so new invocations use the same secret
+
+Without this, each request may use a different in-memory secret and tokens will fail, so you’ll be redirected to login on every page.
+
 ## Troubleshooting
 
 ### Debug Logging
