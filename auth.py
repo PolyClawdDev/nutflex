@@ -34,12 +34,17 @@ def _get_secret_key() -> str:
     """Get or generate secret key (persisted in settings).
 
     On Vercel/serverless, /tmp is per-instance so the secret would change per
-    request and tokens would fail. Use NETV_SECRET_KEY env var so all instances
-    share the same secret and login persists (e.g. set in Vercel dashboard).
+    request and tokens would fail. We need a secret that is the same on every
+    instance: use NETV_SECRET_KEY env if set, else a deterministic fallback
+    from VERCEL_PROJECT_ID so all instances share it and login persists.
     """
     key = os.environ.get("NETV_SECRET_KEY")
     if key:
         return key
+    if os.environ.get("VERCEL"):
+        # Same secret on every instance so JWT works across serverless invocations
+        raw = f"netv-vercel-{os.environ.get('VERCEL_PROJECT_ID', 'default')}"
+        return hashlib.sha256(raw.encode()).hexdigest()
     settings_file = _get_settings_file()
     settings = {}
     if settings_file.exists():

@@ -478,17 +478,24 @@ async def login(
     token = create_token({"sub": username})
     response = RedirectResponse("/", status_code=303)
     is_secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    # path="/" and samesite="lax" so cookie is sent on all same-site navigations (e.g. /settings)
     response.set_cookie(
-        "token", token, httponly=True, samesite="strict", max_age=86400 * 7, secure=is_secure
+        "token",
+        token,
+        path="/",
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 7,
+        secure=is_secure,
     )
-    response.set_cookie("last_user", username, max_age=86400 * 365, secure=is_secure)
+    response.set_cookie("last_user", username, path="/", max_age=86400 * 365, secure=is_secure)
     return response
 
 
 @app.get("/logout")
 async def logout():
     response = RedirectResponse("/login", status_code=303)
-    response.delete_cookie("token")
+    response.delete_cookie("token", path="/")
     return response
 
 
@@ -2856,7 +2863,7 @@ async def settings_delete_user(
             raise HTTPException(400, "Password required to delete your own account")
         auth.delete_user(username)
         response = RedirectResponse("/login", status_code=303)
-        response.delete_cookie("token")
+        response.delete_cookie("token", path="/")
         return response
     # Deleting other users requires admin
     if not auth.is_admin(current_user):
